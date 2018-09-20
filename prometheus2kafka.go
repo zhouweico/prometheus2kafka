@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -148,13 +147,12 @@ func (s *Server) collectMetricData() http.Handler {
 			for _, l := range ts.Labels {
 				metric[model.LabelName(l.Name)] = model.LabelValue(l.Value)
 			}
-			fmt.Println(metric)
 
 			for _, sa := range ts.Samples {
-				entry := &metricEntry{
-					Metric:       metric.String(),
-					Value:        sa.Value,
-					Timestamp:    sa.Timestamp,
+				sample := &model.Sample{
+					Metric:    metric,
+					Value:     model.SampleValue(sa.Value),
+					Timestamp: model.Time(sa.Timestamp),
 				}
 
 				// We are not setting a message key, which means that all messages will
@@ -162,12 +160,12 @@ func (s *Server) collectMetricData() http.Handler {
 				if *async {
 					s.AccessLogProducer.Input() <- &sarama.ProducerMessage{
 						Topic: *topic,
-						Value: entry,
+						Value: sarama.StringEncoder(sample.String()),
 					}
 				} else {
 					_, _, err := s.DataCollector.SendMessage(&sarama.ProducerMessage{
 						Topic: *topic,
-						Value: entry,
+						Value: sarama.StringEncoder(sample.String()),
 					})
 
 					if err != nil {
@@ -178,31 +176,6 @@ func (s *Server) collectMetricData() http.Handler {
 			}
 		}
 	})
-}
-
-type metricEntry struct {
-	Metric       string  `json:"metric"`
-	Value        float64 `json:"value"`
-	Timestamp    int64   `json:"timestamp"`
-
-	encoded []byte
-	err     error
-}
-
-func (ale *metricEntry) ensureEncoded() {
-	if ale.encoded == nil && ale.err == nil {
-		ale.encoded, ale.err = json.Marshal(ale)
-	}
-}
-
-func (ale *metricEntry) Length() int {
-	ale.ensureEncoded()
-	return len(ale.encoded)
-}
-
-func (ale *metricEntry) Encode() ([]byte, error) {
-	ale.ensureEncoded()
-	return ale.encoded, ale.err
 }
 
 type accessLogEntry struct {
@@ -317,4 +290,3 @@ func newAccessLogProducer(brokerList []string) sarama.AsyncProducer {
 
 	return producer
 }
-
