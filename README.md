@@ -1,7 +1,5 @@
 #  prometheus2kafka
 
-prometheus指标数据远程写入 Kafka。
-
 Prometheus配置：
 
 ```
