@@ -1,5 +1,7 @@
 #  prometheus2kafka
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/zhouweico/prometheus2kafka/.svg)](https://pkg.go.dev/github.com/zhouweico/prometheus2kafka/)
+
 Prometheus配置：
 
 ```
